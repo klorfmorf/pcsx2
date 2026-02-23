@@ -2258,16 +2258,55 @@ static void recRecompile(const u32 startpc)
 	if (EmuConfig.Gamefixes.GoemonTlbHack)
 	{
 		if (pc == 0x33ad48 || pc == 0x35060c)
-		{
-			// 0x33ad48 and 0x35060c are the return address of the function (0x356250) that populate the TLB cache
-			xFastCall((void*)GoemonPreloadTlb);
+		{	
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 0);
+
+			// 0x33ad48 and 0x35060c are the return addresses of the function (0x356250) that populates the TLB cache.
+			xFastCall((void*)GoemonTlbHackPreloadTlb);
 		}
 		else if (pc == 0x3563b8)
 		{
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 0);
+
 			// Game will unmap some virtual addresses. If a constant address were hardcoded in the block, we would be in a bad situation.
 			eeRecNeedsReset = true;
-			// 0x3563b8 is the start address of the function that invalidate entry in TLB cache
-			xFastCall((void*)GoemonUnloadTlb, ptr32[&cpuRegs.GPR.n.a0.UL[0]]);
+
+			// 0x3563b8 is the start address of the function that invalidates an entry in TLB cache.
+			xFastCall((void*)GoemonTlbHackUnloadTlb, ptr32[&cpuRegs.GPR.n.a0.UL[0]]);
+		}
+		else if (pc == 0x340600 || pc == 0x356334)
+		{
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 1);
+
+			// 0x340600 and 0x356334 are the return addresses of the function (0x35d4c0) that populates the TLB cache.
+			xFastCall((void*)GoemonTlbHackPreloadTlb);
+		}
+		else if (pc == 0x35c118)
+		{
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 1);
+			
+			// Game will unmap some virtual addresses. If a constant address were hardcoded in the block, we would be in a bad situation.
+			eeRecNeedsReset = true;
+
+			// 0x35c118 is the start address of the function that invalidates an entry in TLB cache.
+			xFastCall((void*)GoemonTlbHackUnloadTlb, ptr32[&cpuRegs.GPR.n.a0.UL[0]]);
+		}
+		else if (pc == 0x341ad0 || pc == 0x357844)
+		{
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 2);
+
+			// 0x341ad0 and 0x357844 are the return addresses of the function (0x35d4c0) that populates the TLB cache.
+			xFastCall((void*)GoemonTlbHackPreloadTlb);
+		}
+		else if (pc == 0x35d628)
+		{
+			xFastCall((void*)GoemonTlbHackSetGameVersion, 2);
+
+			// Game will unmap some virtual addresses. If a constant address were hardcoded in the block, we would be in a bad situation.
+			eeRecNeedsReset = true;
+
+			// 0x3563b8 is the start address of the function that invalidates an entry in TLB cache.
+			xFastCall((void*)GoemonTlbHackUnloadTlb, ptr32[&cpuRegs.GPR.n.a0.UL[0]]);
 		}
 	}
 

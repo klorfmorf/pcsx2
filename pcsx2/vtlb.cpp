@@ -436,11 +436,11 @@ bool vtlb_memSafeWriteBytes(u32 mem, const void* src, u32 size)
 // Important recompiler note: Mid-block Exception handling isn't reliable *yet* because
 // memory ops don't flush the PC prior to invoking the indirect handlers.
 
+static u32 s_goemon_tlb_hack_game_version = 0;
 
-static void GoemonTlbMissDebug()
+static void GoemonTlbHackTlbMissDebug()
 {
-	// 0x3d5580 is the address of the TLB cache
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion();
 
 	for (u32 i = 0; i < 150; i++)
 	{
@@ -451,10 +451,39 @@ static void GoemonTlbMissDebug()
 	}
 }
 
-void GoemonPreloadTlb()
+static GoemonTlb* GoemonTlbHackGetTableAddress()
 {
-	// 0x3d5580 is the address of the TLB cache table
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	// Retrieve a hardcoded address of the TLB cache table depending on the current game version.
+	switch(s_goemon_tlb_hack_game_version) {
+		case 0:
+			// Bouken Jidai Katsugeki: Goemon
+			return (GoemonTlb*)&eeMem->Main[0x3d5580];
+			break;
+
+		case 1:
+			// Mystical Ninja Goemon Zero (Jun 22, 2005 prototype)
+			return (GoemonTlb*)&eeMem->Main[0x3db400];
+			break;
+
+		case 2:
+			// Mystical Ninja Goemon Zero (Aug 26, 2005 prototype)
+			return (GoemonTlb*)&eeMem->Main[0x3dcd80];
+			break;
+
+		default:
+			DevCon.WriteLn("GoemonTlbHackGetTableAddress: Unable to find valid TLB table address for version %d. Expect cache misses.");
+			break; 
+	}
+}
+
+void GoemonTlbHackSetGameVersion(u32 version)
+{
+	s_goemon_tlb_hack_game_version = version;
+}
+
+void GoemonTlbHackPreloadTlb()
+{
+	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion(version);
 
 	for (u32 i = 0; i < 150; i++)
 	{
@@ -478,10 +507,9 @@ void GoemonPreloadTlb()
 	}
 }
 
-void GoemonUnloadTlb(u32 key)
+void GoemonTlbHackUnloadTlb(u32 key)
 {
-	// 0x3d5580 is the address of the TLB cache table
-	GoemonTlb* tlb = (GoemonTlb*)&eeMem->Main[0x3d5580];
+	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion(version);
 	for (u32 i = 0; i < 150; i++)
 	{
 		if (tlb[i].key == key)
@@ -514,7 +542,7 @@ void GoemonUnloadTlb(u32 key)
 static __ri void vtlb_Miss(u32 addr, u32 mode)
 {
 	if (EmuConfig.Gamefixes.GoemonTlbHack)
-		GoemonTlbMissDebug();
+		GoemonTlbHackTlbMissDebug();
 
 	// Hack to handle expected tlb miss by some games.
 	if (Cpu == &intCpu)

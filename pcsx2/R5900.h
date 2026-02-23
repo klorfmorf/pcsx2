@@ -402,8 +402,9 @@ extern void cpuTlbMissR(u32 addr, u32 bd);
 extern void cpuTlbMissW(u32 addr, u32 bd);
 extern void cpuTestHwInts();
 extern void cpuClearInt(uint n);
-extern void GoemonPreloadTlb();
-extern void GoemonUnloadTlb(u32 key);
+extern void GoemonTlbHackSetGameVersion(u32 version);
+extern void GoemonTlbHackPreloadTlb();
+extern void GoemonTlbHackUnloadTlb(u32 key);
 
 extern void cpuSetNextEvent( u32 startCycle, s32 delta );
 extern void cpuSetNextEventDelta( s32 delta );
