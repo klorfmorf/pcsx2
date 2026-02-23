@@ -499,7 +499,7 @@ void GoemonTlbHackPreloadTlb()
 			auto vmv = vtlbdata.vmap[vaddr >> VTLB_PAGE_BITS];
 			if (vmv.isHandler(vaddr) && vmv.assumeHandlerGetID() == 0)
 			{
-				DevCon.WriteLn("GoemonPreloadTlb: Entry %d. Key %x. From V:0x%8.8x to P:0x%8.8x (%d pages)", i, tlb[i].key, vaddr, paddr, size >> VTLB_PAGE_BITS);
+				DevCon.WriteLn("GoemonTlbHackPreloadTlb: Entry %d. Key %x. From V:0x%8.8x to P:0x%8.8x (%d pages)", i, tlb[i].key, vaddr, paddr, size >> VTLB_PAGE_BITS);
 				vtlb_VMap(vaddr, paddr, size);
 				vtlb_VMap(0x20000000 | vaddr, paddr, size);
 			}
@@ -518,7 +518,7 @@ void GoemonTlbHackUnloadTlb(u32 key)
 			{
 				u32 size = tlb[i].high_add - tlb[i].low_add;
 				u32 vaddr = tlb[i].low_add;
-				DevCon.WriteLn("GoemonUnloadTlb: Entry %d. Key %x. From V:0x%8.8x to V:0x%8.8x (%d pages)", i, tlb[i].key, vaddr, vaddr + size, size >> VTLB_PAGE_BITS);
+				DevCon.WriteLn("GoemonTlbHackUnloadTlb: Entry %d. Key %x. From V:0x%8.8x to V:0x%8.8x (%d pages)", i, tlb[i].key, vaddr, vaddr + size, size >> VTLB_PAGE_BITS);
 
 				vtlb_VMapUnmap(vaddr, size);
 				vtlb_VMapUnmap(0x20000000 | vaddr, size);
@@ -532,7 +532,7 @@ void GoemonTlbHackUnloadTlb(u32 key)
 			}
 			else
 			{
-				DevCon.Error("GoemonUnloadTlb: Entry %d is not valid. Key %x", i, tlb[i].key);
+				DevCon.Error("GoemonTlbHackUnloadTlb: Entry %d is not valid. Key %x", i, tlb[i].key);
 			}
 		}
 	}

@@ -77,7 +77,7 @@ static void PostLoadPrep()
 		}
 	}
 
-	if (EmuConfig.Gamefixes.GoemonTlbHack) GoemonPreloadTlb();
+	if (EmuConfig.Gamefixes.GoemonTlbHack) GoemonTlbHackPreloadTlb();
 	CBreakPoints::SetSkipFirst(BREAKPOINT_EE, 0);
 	CBreakPoints::SetSkipFirst(BREAKPOINT_IOP, 0);
 
