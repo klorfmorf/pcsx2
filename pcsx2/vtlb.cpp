@@ -438,9 +438,34 @@ bool vtlb_memSafeWriteBytes(u32 mem, const void* src, u32 size)
 
 static u32 s_goemon_tlb_hack_game_version = 0;
 
+static GoemonTlb* GoemonTlbHackGetTableAddress()
+{
+	// Retrieve a hardcoded address of the TLB cache table depending on the current game version.
+	switch(s_goemon_tlb_hack_game_version) {
+	case 0:
+		// Bouken Jidai Katsugeki: Goemon
+		return (GoemonTlb*)&eeMem->Main[0x3d5580];
+		break;
+
+	case 1:
+		// Mystical Ninja Goemon Zero (Jun 22, 2005 prototype)
+		return (GoemonTlb*)&eeMem->Main[0x3db400];
+		break;
+
+	case 2:
+		// Mystical Ninja Goemon Zero (Aug 26, 2005 prototype)
+		return (GoemonTlb*)&eeMem->Main[0x3dcd80];
+		break;
+
+	default:
+		DevCon.WriteLn("GoemonTlbHackGetTableAddress: Unable to find valid TLB table address for version %d. Expect cache misses.");
+		break; 
+	}
+}
+
 static void GoemonTlbHackTlbMissDebug()
 {
-	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion();
+	GoemonTlb* tlb = GoemonTlbHackGetTableAddress();
 
 	for (u32 i = 0; i < 150; i++)
 	{
@@ -451,31 +476,6 @@ static void GoemonTlbHackTlbMissDebug()
 	}
 }
 
-static GoemonTlb* GoemonTlbHackGetTableAddress()
-{
-	// Retrieve a hardcoded address of the TLB cache table depending on the current game version.
-	switch(s_goemon_tlb_hack_game_version) {
-		case 0:
-			// Bouken Jidai Katsugeki: Goemon
-			return (GoemonTlb*)&eeMem->Main[0x3d5580];
-			break;
-
-		case 1:
-			// Mystical Ninja Goemon Zero (Jun 22, 2005 prototype)
-			return (GoemonTlb*)&eeMem->Main[0x3db400];
-			break;
-
-		case 2:
-			// Mystical Ninja Goemon Zero (Aug 26, 2005 prototype)
-			return (GoemonTlb*)&eeMem->Main[0x3dcd80];
-			break;
-
-		default:
-			DevCon.WriteLn("GoemonTlbHackGetTableAddress: Unable to find valid TLB table address for version %d. Expect cache misses.");
-			break; 
-	}
-}
-
 void GoemonTlbHackSetGameVersion(u32 version)
 {
 	s_goemon_tlb_hack_game_version = version;
@@ -483,7 +483,7 @@ void GoemonTlbHackSetGameVersion(u32 version)
 
 void GoemonTlbHackPreloadTlb()
 {
-	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion(version);
+	GoemonTlb* tlb = GoemonTlbHackGetTableAddress();
 
 	for (u32 i = 0; i < 150; i++)
 	{
@@ -509,7 +509,7 @@ void GoemonTlbHackPreloadTlb()
 
 void GoemonTlbHackUnloadTlb(u32 key)
 {
-	GoemonTlb* tlb = GoemonTlbGetTableAddressForVersion(version);
+	GoemonTlb* tlb = GoemonTlbHackGetTableAddress();
 	for (u32 i = 0; i < 150; i++)
 	{
 		if (tlb[i].key == key)
