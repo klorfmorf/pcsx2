@@ -250,6 +250,12 @@ void InterfaceSettingsWidget::updatePromptOnStateLoadSaveFailureCheckbox(Qt::Che
 	m_ui.promptOnStateLoadSaveFailure->setCheckState(state);
 }
 
+void InterfaceSettingsWidget::updateMouseLockCheckbox(Qt::CheckState state)
+{
+	QSignalBlocker blocker(m_ui.mouseLock);
+	m_ui.mouseLock->setCheckState(state);
+}
+
 void InterfaceSettingsWidget::onRenderToSeparateWindowChanged()
 {
 	m_ui.hideMainWindow->setEnabled(m_ui.renderToSeparateWindow->isChecked());
@@ -288,3 +294,5 @@ void InterfaceSettingsWidget::onClearGameListBackgroundTriggered()
 	Host::CommitBaseSettingChanges();
 	emit backgroundChanged();
 }
+
+#include "moc_InterfaceSettingsWidget.cpp"

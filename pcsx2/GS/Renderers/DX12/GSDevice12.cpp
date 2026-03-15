@@ -322,18 +322,19 @@ bool GSDevice12::CreateDevice(u32& vendor_id)
 			}
 
 			D3D12_INFO_QUEUE_FILTER filter = {};
-			std::array<D3D12_MESSAGE_ID, 6> id_list{
+			std::array<D3D12_MESSAGE_ID, 7> id_list{
 				D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
 				D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
 				D3D12_MESSAGE_ID_CREATEGRAPHICSPIPELINESTATE_RENDERTARGETVIEW_NOT_SET,
 				D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_TYPE_MISMATCH,
 				D3D12_MESSAGE_ID_DRAW_EMPTY_SCISSOR_RECTANGLE,
-				// The current OS version of D3D12 (616) has a validation bug
-				// This is fixed with Agility 1.618.4.
-				// For now, disable this warning untill the OS updates.
+				// The current OS version of D3D12 (616) has a validation bug.
+				// This is fixed with Agility 1.618.4 (RTV) and 1.619.0 (UAV).
+				// For now, disable these warnings until the OS updates.
 				D3D12_MESSAGE_ID_INCOMPATIBLE_BARRIER_LAYOUT,
+				D3D12_MESSAGE_ID_GPU_BASED_VALIDATION_INCOMPATIBLE_TEXTURE_LAYOUT,
 			};
-			filter.DenyList.NumIDs = static_cast<UINT>(sdkVersion < 618 ? id_list.size() : id_list.size() - 1);
+			filter.DenyList.NumIDs = static_cast<UINT>(sdkVersion < 619 ? id_list.size() : id_list.size() - 2);
 			filter.DenyList.pIDList = id_list.data();
 			info_queue->PushStorageFilter(&filter);
 		}
@@ -1776,10 +1777,13 @@ void GSDevice12::DoMultiStretchRects(
 		const GSVector4& sRect = rects[i].src_rect;
 		const GSVector4& dRect = rects[i].dst_rect;
 
-		const float left = dRect.x * 2 / ds.x - 1.0f;
-		const float top = 1.0f - dRect.y * 2 / ds.y;
-		const float right = dRect.z * 2 / ds.x - 1.0f;
-		const float bottom = 1.0f - dRect.w * 2 / ds.y;
+		const float inv_x = 2.0f / ds.x;
+		const float inv_y = 2.0f / ds.y;
+
+		const float left = dRect.x * inv_x - 1.0f;
+		const float right = dRect.z * inv_x - 1.0f;
+		const float top = 1.0f - dRect.y * inv_y;
+		const float bottom = 1.0f - dRect.w * inv_y;
 
 		const u32 vstart = vcount;
 		verts[vcount++] = {GSVector4(left, top, 0.5f, 1.0f), GSVector2(sRect.x, sRect.y)};
@@ -1890,12 +1894,15 @@ void GSDevice12::DrawStretchRect(const GSVector4& sRect, const GSVector4& dRect,
 	g_perfmon.Put(GSPerfMon::TextureCopies, 1);
 
 	// ia
-	const float left = dRect.x * 2 / ds.x - 1.0f;
-	const float top = 1.0f - dRect.y * 2 / ds.y;
-	const float right = dRect.z * 2 / ds.x - 1.0f;
-	const float bottom = 1.0f - dRect.w * 2 / ds.y;
+	const float inv_x = 2.0f / ds.x;
+	const float inv_y = 2.0f / ds.y;
 
-	GSVertexPT1 vertices[] = {
+	const float left = dRect.x * inv_x - 1.0f;
+	const float right = dRect.z * inv_x - 1.0f;
+	const float top = 1.0f - dRect.y * inv_y;
+	const float bottom = 1.0f - dRect.w * inv_y;
+
+	const GSVertexPT1 vertices[] = {
 		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sRect.x, sRect.y)},
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sRect.z, sRect.y)},
 		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sRect.x, sRect.w)},
@@ -2293,6 +2300,8 @@ void GSDevice12::RenderImGui()
 bool GSDevice12::DoCAS(
 	GSTexture* sTex, GSTexture* dTex, bool sharpen_only, const std::array<u32, NUM_CAS_CONSTANTS>& constants)
 {
+	g_perfmon.Put(GSPerfMon::TextureCopies, 1);
+
 	EndRenderPass();
 
 	GSTexture12* const sTex12 = static_cast<GSTexture12*>(sTex);

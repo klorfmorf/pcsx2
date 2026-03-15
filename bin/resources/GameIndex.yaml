@@ -2625,7 +2625,7 @@ SCAJ-25047:
   gsHWFixes:
     minimumBlendingLevel: 2 # Fixes dark font to more bright like software mode.
 SCAJ-30001:
-  name: "Xenosaga - Episode I - Der Wille zur Macht [PlayStation2 the Best]"
+  name: "Xenosaga Episode I - Der Wille zur Macht [PlayStation2 the Best]"
   region: "NTSC-Unk"
   compat: 5
   gsHWFixes:
@@ -16901,9 +16901,11 @@ SLES-51053:
   name: "Tom & Jerry's War of the Wiskers"
   region: "PAL-M6"
 SLES-51054:
-  name: "Midnight Club 2"
+  name: "Midnight Club II"
   region: "PAL-M5"
   compat: 5
+  gsHWFixes:
+    nativeScaling: 1 # Fixes light effect flicker while selecting a car.
   patches:
     ACB1989A:
       content: |-
@@ -27424,6 +27426,8 @@ SLES-54664:
 SLES-54665:
   name: "Paddington Bear"
   region: "PAL-M11"
+  gsHWFixes:
+    textureInsideRT: 1 # Fixes half right.
 SLES-54666:
   name: "Mr. Bean"
   region: "PAL-M11"
@@ -64845,6 +64849,8 @@ SLUS-20209:
   name: "Midnight Club II"
   region: "NTSC-U"
   compat: 5
+  gsHWFixes:
+    nativeScaling: 1 # Fixes light effect flicker while selecting a car.
   patches:
     E5F2DF38:
       content: |-
@@ -66191,7 +66197,7 @@ SLUS-20468:
   name: "Dynasty Tactics"
   region: "NTSC-U"
 SLUS-20469:
-  name: "Xenosaga - Episode I - Der Wille zur Macht"
+  name: "Xenosaga Episode I - Der Wille zur Macht"
   region: "NTSC-U"
   compat: 5
   gsHWFixes:
@@ -68490,7 +68496,7 @@ SLUS-20891:
   memcardFilters:
     - "SLUS-20488"
 SLUS-20892:
-  name: "Xenosaga - Episode II - Jenseits von Gut und Böse [Disc 1 of 2]"
+  name: "Xenosaga Episode II - Jenseits von Gut und Böse [Disc 1 of 2]"
   region: "NTSC-U"
   compat: 5
   gsHWFixes:
@@ -69957,7 +69963,7 @@ SLUS-21132:
   region: "NTSC-U"
   compat: 5
 SLUS-21133:
-  name: "Xenosaga - Episode II - Jenseits von Gut und Böse [Disc 2 of 2]"
+  name: "Xenosaga Episode II - Jenseits von Gut und Böse [Disc 2 of 2]"
   region: "NTSC-U"
   compat: 5
   gsHWFixes:

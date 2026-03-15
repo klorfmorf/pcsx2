@@ -66,7 +66,7 @@ GSDevice11::GSDevice11()
 	m_features.framebuffer_fetch = false;
 	m_features.stencil_buffer = true;
 	m_features.cas_sharpening = true;
-	m_features.test_and_sample_depth = true;
+	m_features.test_and_sample_depth = false;
 }
 
 GSDevice11::~GSDevice11() = default;
@@ -604,6 +604,7 @@ void GSDevice11::SetFeatures(IDXGIAdapter1* adapter)
 
 	m_features.vs_expand = (!GSConfig.DisableVertexShaderExpand && m_feature_level >= D3D_FEATURE_LEVEL_11_0);
 	m_features.cas_sharpening = (m_feature_level >= D3D_FEATURE_LEVEL_11_0);
+	m_features.test_and_sample_depth = (m_feature_level >= D3D_FEATURE_LEVEL_11_0);
 
 	m_max_texture_size = (m_feature_level >= D3D_FEATURE_LEVEL_11_0) ?
 	                         D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION :
@@ -616,6 +617,7 @@ void GSDevice11::SetFeatures(IDXGIAdapter1* adapter)
 	Console.WriteLnFmt("D3D11: DXTn Texture Compression: {}", m_features.dxt_textures ? "Supported" : "Not Supported");
 	Console.WriteLnFmt("D3D11: BC6/7 Texture Compression: {}", m_features.bptc_textures ? "Supported" : "Not Supported");
 	Console.WriteLnFmt("D3D11: Conservative Depth: {}", m_conservative_depth ? "Supported" : "Not Supported");
+	Console.WriteLnFmt("D3D11: Depth Testing and Sampling: {}", m_features.test_and_sample_depth ? "Supported" : "Not Supported");
 	Console.WriteLnFmt("D3D11: RGBA16 UNORM Hardware Blending: {}", m_rgba16_unorm_hw_blend ? "Supported" : "Not Supported");
 }
 
@@ -1352,12 +1354,15 @@ void GSDevice11::DoStretchRect(GSTexture* sTex, const GSVector4& sRect, GSTextur
 
 	// ia
 
-	const float left = dRect.x * 2 / ds.x - 1.0f;
-	const float top = 1.0f - dRect.y * 2 / ds.y;
-	const float right = dRect.z * 2 / ds.x - 1.0f;
-	const float bottom = 1.0f - dRect.w * 2 / ds.y;
+	const float inv_x = 2.0f / ds.x;
+	const float inv_y = 2.0f / ds.y;
 
-	GSVertexPT1 vertices[] =
+	const float left = dRect.x * inv_x - 1.0f;
+	const float right = dRect.z * inv_x - 1.0f;
+	const float top = 1.0f - dRect.y * inv_y;
+	const float bottom = 1.0f - dRect.w * inv_y;
+
+	const GSVertexPT1 vertices[] =
 	{
 		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sRect.x, sRect.y)},
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sRect.z, sRect.y)},
@@ -1422,10 +1427,13 @@ void GSDevice11::PresentRect(GSTexture* sTex, const GSVector4& sRect, GSTexture*
 
 	// ia
 
-	const float left = dRect.x * 2 / ds.x - 1.0f;
-	const float top = 1.0f - dRect.y * 2 / ds.y;
-	const float right = dRect.z * 2 / ds.x - 1.0f;
-	const float bottom = 1.0f - dRect.w * 2 / ds.y;
+	const float inv_x = 2.0f / ds.x;
+	const float inv_y = 2.0f / ds.y;
+
+	const float left = dRect.x * inv_x - 1.0f;
+	const float right = dRect.z * inv_x - 1.0f;
+	const float top = 1.0f - dRect.y * inv_y;
+	const float bottom = 1.0f - dRect.w * inv_y;
 
 	const GSVertexPT1 vertices[] =
 	{
@@ -1565,10 +1573,14 @@ void GSDevice11::DoMultiStretchRects(const MultiStretchRect* rects, u32 num_rect
 	{
 		const GSVector4& sRect = rects[i].src_rect;
 		const GSVector4& dRect = rects[i].dst_rect;
-		const float left = dRect.x * 2 / ds.x - 1.0f;
-		const float top = 1.0f - dRect.y * 2 / ds.y;
-		const float right = dRect.z * 2 / ds.x - 1.0f;
-		const float bottom = 1.0f - dRect.w * 2 / ds.y;
+
+		const float inv_x = 2.0f / ds.x;
+		const float inv_y = 2.0f / ds.y;
+
+		const float left = dRect.x * inv_x - 1.0f;
+		const float right = dRect.z * inv_x - 1.0f;
+		const float top = 1.0f - dRect.y * inv_y;
+		const float bottom = 1.0f - dRect.w * inv_y;
 
 		const u32 vstart = vcount;
 		verts[vcount++] = {GSVector4(left, top, 0.5f, 1.0f), GSVector2(sRect.x, sRect.y)};
@@ -2007,6 +2019,8 @@ bool GSDevice11::CreateCASShaders()
 
 bool GSDevice11::DoCAS(GSTexture* sTex, GSTexture* dTex, bool sharpen_only, const std::array<u32, NUM_CAS_CONSTANTS>& constants)
 {
+	g_perfmon.Put(GSPerfMon::TextureCopies, 1);
+
 	static const int threadGroupWorkRegionDim = 16;
 	const int dispatchX = (dTex->GetWidth() + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
 	const int dispatchY = (dTex->GetHeight() + (threadGroupWorkRegionDim - 1)) / threadGroupWorkRegionDim;
@@ -2503,7 +2517,12 @@ void GSDevice11::PSUnbindConflictingSRVs(GSTexture* tex1, GSTexture* tex2)
 		// We chech against what's currently bound (cached_sr_views), then update local state (ps_sr_views) which calls PSUpdateShaderState to update gpu state.
 		if ((tex1 && m_state.ps_cached_sr_views[i] == *static_cast<GSTexture11*>(tex1)) || (tex2 && m_state.ps_cached_sr_views[i] == *static_cast<GSTexture11*>(tex2)))
 		{
-			m_state.ps_sr_views[i] = nullptr;
+			// Local and gpu cached state can differ, if it does check if it conflicts and if it doesn't then we can bind that instead of unbinding.
+			const bool unbind_needed = (tex1 && m_state.ps_sr_views[i] == *static_cast<GSTexture11*>(tex1)) || (tex2 && m_state.ps_sr_views[i] == *static_cast<GSTexture11*>(tex2));
+
+			if (unbind_needed)
+				m_state.ps_sr_views[i] = nullptr;
+
 			changed = true;
 		}
 	}
@@ -2748,9 +2767,15 @@ void GSDevice11::RenderHW(GSHWDrawConfig& config)
 	IASetPrimitiveTopology(topology);
 
 	// Depth testing and sampling, bind resource as dsv read only and srv at the same time without the need of a copy.
+	// TODO: On older feature levels read only depth is not supported, we can fallback to a copy but a better solution
+	// is to wait for Depth feedback loops, in this case we can use it always, unbind the dsv and do testing in shader
+	// with no copies or separate read only dsv.
 	ID3D11DepthStencilView* read_only_dsv = nullptr;
 	if (config.tex && config.tex == config.ds)
-		read_only_dsv = static_cast<GSTexture11*>(config.ds)->ReadOnlyDepthStencilView();
+		if (m_features.test_and_sample_depth)
+			read_only_dsv = static_cast<GSTexture11*>(config.ds)->ReadOnlyDepthStencilView();
+		else
+			config.tex = nullptr;
 
 	// Preemptively bind srv if possible.
 	// We update the local state, then if there are srv conflicts PSUnbindConflictingSRVs will update the gpu state.
